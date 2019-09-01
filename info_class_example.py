@@ -19,8 +19,8 @@ data = data.astype(int)
 info_object = info.Informacion(X=data,last_feature_is_Y=True)
 
 orig = info_object.logistic_regression_lerner(seed=seed)[0]
-im = info_object.logistic_regression_lerner(cols_pos= info_object.mRMR_MI() ,seed=seed)[0]
-delta = info_object.logistic_regression_lerner(cols_pos= info_object.mRMR_Delta() ,seed=seed)[0]
+im = info_object.logistic_regression_lerner(cols_pos= info_object.filter_MI() ,seed=seed)[0]
+delta = info_object.logistic_regression_lerner(cols_pos= info_object.filter_Delta() ,seed=seed)[0]
 
 print("LOGISTIC REGRESSION. Porcentaje bien clasificado:")
 print("Original:",orig)

@@ -44,9 +44,6 @@ class Informacion:
     def get_Y(self):
         return self.Y
 
-    def get_F(self):
-        return self.F
-
     #-------------------------------#
     #-------------------------------#
     #       MUTUAL INFORMATION      #
@@ -286,12 +283,21 @@ class Informacion:
             return - summation
 
 
-    def mutual_information_fc(self, f_index, log_base, debug = False):
+    def mutual_information_fc(self, f_index, log_base, data = None, debug = False):
         """
         Calculate and return Mutual information between two random variables
         """
+        X = None
+        n_cols = 0
+        if data is None:
+            X = self.X
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_cols = X.shape[1]
+
         # Check if index are into the bounds
-        assert (f_index >= 0 and f_index <= self.n_cols)
+        assert (f_index >= 0 and f_index <= n_cols)
         assert(len(self.Y) > 0)
         """
         H_X = self.single_entropy(x_index=x_index,log_base=log_base)
@@ -303,7 +309,7 @@ class Informacion:
         summation = 0.0
         # Get uniques values of random variables
         t_s = time.time()
-        f = self.X[...,f_index]
+        f = X[...,f_index]
         values_x = Counter(f)
         values_y = Counter(self.Y)
         # Print debug info
@@ -346,13 +352,22 @@ class Informacion:
                     print(time.time() - t_s)
         return summation
 
-    def mutual_information_ff(self, f_index1, f_index2, log_base, debug = False):
+    def mutual_information_ff(self, f_index1, f_index2, log_base, data=None, debug = False):
         """
         Calculate and return Mutual information between two random variables
         """
+        X = None
+        n_cols = 0
+        if data is None:
+            X = self.X
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_cols = X.shape[1]
+
         # Check if index are into the bounds
-        assert (f_index1 >= 0 and f_index1 <= self.n_cols)
-        assert (f_index2 >= 0 and f_index2 <= self.n_cols)
+        assert (f_index1 >= 0 and f_index1 <= n_cols)
+        assert (f_index2 >= 0 and f_index2 <= n_cols)
         """
         H_X = self.single_entropy(x_index=x_index,log_base=log_base)
         H_Y = self.single_entropy(x_index=y_index,log_base=log_base)
@@ -363,8 +378,8 @@ class Informacion:
         summation = 0.0
         # Get uniques values of random variables
         t_s = time.time()
-        f1 = self.X[...,f_index1]
-        f2 = self.X[...,f_index2]
+        f1 = X[...,f_index1]
+        f2 = X[...,f_index2]
         values_x = Counter(f1)
         values_y = Counter(f2)
         # Print debug info
@@ -521,6 +536,79 @@ class Informacion:
         # We return the indexes of the selected features.
         return S_pos
 
+    def filter_MI(self, num_features = None, subset_indexes = None):
+        """
+        Greedy maximizing algorithm.
+        A Filter Algorithm based on Delta Test.
+
+        Input: num_features for how many features we would like,
+        subset_indexes if we'd like to start with some features already selected.
+
+        Output: The indexes of the features selected.
+        """
+        # We initialize some items.
+        features = 0
+        F_pos = list(range(self.n_cols))
+        # We will be deleting columns and positions from F_pos. To return the indexes of the features selected,
+        # not_excluded_pos control is really important.
+        not_excluded_pos = list(range(self.n_cols))
+        S_pos = subset_indexes
+        # We will manipulate X so we need to copy it.
+        X = copy(self.X)
+        # By default, if number of features we will want is not determined, then it will be the truncation of the half.
+        if num_features is None:
+            features = int(self.n_cols/2)
+        else:
+            features = num_features
+        assert(features < self.n_cols)
+        # We check if there are already features selected (and remove them from X).
+        if S_pos is None:
+            S_pos = []
+        else:
+            for i in S_pos:
+                X = delete(arr=X, obj=i, axis=1)
+                # F_pos and not_excluded_pos must have the same number of indexes, but
+                # not_excluded_pos must have the control of the indexes of the original X.
+                # So if there are features already selected, they will not be part
+                # of the algorithm.
+                del not_excluded_pos[i]
+            F_pos = list(range(self.n_cols - len(S_pos)))
+
+        t_s = 0
+        # Number of features deleted (number of iterations in the big loop).
+        deleted_features = 0
+        # If we need n features, it's the same to N - (number_of_features_already_selected + number_of_features_deleted) == n.
+        while (self.n_cols - len(S_pos) - deleted_features) != features:
+            t_s = time.time()
+            max_mi = -9999
+            max_fi = -1
+            # For each feature, we copy X, delete the feature (column), for the rest of the features we sum the MI between each feature and the class, then update the maximum. And repeat.
+            for fi in F_pos:
+                X_aux = delete(arr=X, obj=fi, axis=1)
+                # We control the indexes of the rest of the available features.
+                F_sub_pos = F_pos[:fi] + [i-1 for i in F_pos[fi+1:]]
+                # We calculate the MI: the sum of the MI between the features fj and the class.
+                mi = 0.0
+                for fj in F_sub_pos:
+                    if fi != fj:
+                        mi += self.mutual_information_fc(f_index=fj,log_base=2,data=X_aux)
+                # We update the maximum.
+                if mi > max_mi:
+                    max_mi = mi
+                    max_fi = fi
+            # We delete the feature with the minimum delta.
+            X = delete(arr=X, obj=max_fi, axis=1)
+            deleted_features += 1
+            # We update the indexes to iterate with.
+            F_pos = F_pos[:max_fi] + [i-1 for i in F_pos[max_fi+1:]]
+            # We update the list that controls the features of the original X.
+            del not_excluded_pos[max_fi]
+
+            #print("Min:", min_delta, min_fi, not_excluded_pos)
+            #print("Tiempo:",time.time()-t_s)
+        # We return the features already selected, and the columns that weren't deleted.
+        return S_pos + not_excluded_pos
+
 
     #------------------#
     #------------------#
@@ -528,36 +616,16 @@ class Informacion:
     #------------------#
     #------------------#
 
-    def KVecinoMasCercano(self,x_index,k=1):
-        """
-        Returns the index of the K nearest neighbor of an x_i.
-        """
-        # p=2 means L2 distance (Euclidean).
-        # K is k+1 as the point itself is the nearest.
-        knn = NearestNeighbors(n_neighbors=k+1,p=2)
-        knn.fit(self.X)
-        # As X[i] is a single sample, we reshape it.
-        # At the end, we return the index of the Kth element.
-        # To return the list dropping the point itself  out, it's [0][1:].
-        return knn.kneighbors(self.X[x_index].reshape(1,-1), return_distance=False)[0][k]
-
-    def TestDelta(self,k=1):
-        """
-        Returns the noise estimation variance calculated by the Delta Test.
-        """
-        suma = 0.0
-        for i in range(0,self.n_cols):
-            # For each element in the data, we find its Kth nearest neighbor.
-            NN_index = KVecinoMasCercano(x_index=i,k=k)
-            # We calculate the formula.
-            suma += float(self.Y[i] - self.Y[NN_index])**2
-        return suma / (2*self.n_cols)
-
     # K Vecino Mas Cercano con un X modificado.
-    def KVecinoMasCercano_X(self,X,x_index,k=1):
+    def KVecinoMasCercano(self,x_index,data=None,k=1):
         """
         Returns the index of the K nearest neighbor of an x_i.
         """
+        X = None
+        if data is None:
+            X = self.X
+        else:
+            X = data
         # p=2 means L2 distance (Euclidean).
         # K is k+1 as the point itself is the nearest.
         knn = NearestNeighbors(n_neighbors=k+1,p=2)
@@ -567,23 +635,30 @@ class Informacion:
         # To return the list dropping the point itself out, it's [0][1:].
         return knn.kneighbors(X[x_index].reshape(1,-1), return_distance=False)[0][k]
 
-    def TestDelta_X(self,X,k=1):
+    def TestDelta(self,data=None,k=1):
         """
         Returns the noise estimation variance calculated by the Delta Test.
         """
+        X = None
+        n_cols = 0
+        if data is None:
+            X = self.X
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_cols = X.shape[1]
         suma = 0.0
-        n_cols = X.shape[1]
         for i in range(0,n_cols):
             # For each element in the data, we find its Kth nearest neighbor.
-            NN_index = self.KVecinoMasCercano_X(X=X,x_index=i,k=k)
+            NN_index = self.KVecinoMasCercano(data=X,x_index=i,k=k)
             # We calculate the formula.
             suma += float(self.Y[i] - self.Y[NN_index])**2
         return suma / (2*n_cols)
 
-    def mRMR_Delta(self, k=1, num_features = None, subset_indexes = None, delta_is_zero = True):
+    def filter_Delta(self, k=1, num_features = None, subset_indexes = None, delta_is_zero = True):
         """
-        Maximum Relevance Minimum Redundancy algorithm.
-        A Filter Algorithm based on Mutual Information.
+        Greedy minimizing algorithm.
+        A Filter Algorithm based on Delta Test.
 
         Input: k for kth nearest neighbor, num_features for how many features we would like,
         subset_indexes if we'd like to start with some features already selected, delta_is_zero to enable the condition
@@ -614,10 +689,10 @@ class Informacion:
                 X = delete(arr=X, obj=i, axis=1)
                 # F_pos and not_excluded_pos must have the same number of indexes, but
                 # not_excluded_pos must have the control of the indexes of the original X.
-                # So if there are features already selected, they will not have a part
-                # in the algorithm.
+                # So if there are features already selected, they will not be part
+                # of the algorithm.
                 del not_excluded_pos[i]
-            F_pos = list(range(self.n_cols - len(S)))
+            F_pos = list(range(self.n_cols - len(S_pos)))
 
         # The initialization of delta_so_far, to check if we reach to a delta = 0.
         delta_so_far = -1
@@ -632,7 +707,9 @@ class Informacion:
             # For each feature, we copy X, delete the feature (column), apply delta and update the minimum. And repeat.
             for fi in F_pos:
                 X_aux = delete(arr=X, obj=fi, axis=1)
-                delta = self.TestDelta_X(X=X_aux,k=k)
+                # We calculate the delta.
+                delta = self.TestDelta(data=X_aux,k=k)
+                # We update the minimum.
                 if delta < min_delta:
                     min_delta = delta
                     min_fi = fi
@@ -654,9 +731,9 @@ class Informacion:
 
 
     # ALL TOGETHER #
-    
+
     # Está mal la parte del Delta todavía
-    def mRMR_MI_Delta(self, k=1, num_features = None, subset_indexes = None):
+    def filter_MI_Delta(self, k=1, num_features = None, subset_indexes = None):
         """
         Maximum Relevance Minimum Redundancy algorithm.
         A Filter Algorithm based on Mutual Information.
