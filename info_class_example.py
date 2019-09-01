@@ -18,11 +18,22 @@ data = data.astype(int)
 
 info_object = info.Informacion(X=data,last_feature_is_Y=True)
 
-orig = info_object.logistic_regression_lerner(seed=seed)[0]
-im = info_object.logistic_regression_lerner(cols_pos= info_object.filter_MI() ,seed=seed)[0]
-delta = info_object.logistic_regression_lerner(cols_pos= info_object.filter_Delta() ,seed=seed)[0]
+print()
+print("INDEXES OF FEATURES SELECTED:")
+mi_f = info_object.filter_MI()
+print("MI:",mi_f)
+delta_f = info_object.filter_Delta()
+print("Delta:",delta_f)
+mix_f = info_object.filter_MI_Delta()
+print("Mix:",mix_f)
 
+print()
 print("LOGISTIC REGRESSION. Porcentaje bien clasificado:")
+orig = info_object.logistic_regression_lerner(seed=seed)[0]
 print("Original:",orig)
-print("IM:",im)
-print("Delta Test:",delta)
+mi_l = info_object.logistic_regression_lerner(cols_pos= mi_f[0] ,seed=seed)[0]
+print("MI:",mi_l)
+delta_l = info_object.logistic_regression_lerner(cols_pos= delta_f[0] ,seed=seed)[0]
+print("Delta:",delta_l)
+mix_l = info_object.logistic_regression_lerner(cols_pos= mix_f[0] ,seed=seed)[0]
+print("Mix:",mix_l)

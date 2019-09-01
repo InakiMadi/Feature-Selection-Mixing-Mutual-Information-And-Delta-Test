@@ -1,10 +1,5 @@
 #!/usr/bin/env python
-"""
-Script to calculate Mutual Information between two discrete random variables
 
-Roberto maestre - rmaestre@gmail.com
-Bojan Mihaljevic - boki.mihaljevic@gmail.com
-"""
 from __future__ import division
 from numpy  import array, shape, where, in1d, intersect1d, asarray, copy, delete, int64, float64, argmax, sum
 import math
@@ -590,8 +585,7 @@ class Informacion:
                 # We calculate the MI: the sum of the MI between the features fj and the class.
                 mi = 0.0
                 for fj in F_sub_pos:
-                    if fi != fj:
-                        mi += self.mutual_information_fc(f_index=fj,log_base=2,data=X_aux)
+                    mi += self.mutual_information_fc(f_index=fj,log_base=2,data=X_aux)
                 # We update the maximum.
                 if mi > max_mi:
                     max_mi = mi
@@ -607,7 +601,11 @@ class Informacion:
             #print("Min:", min_delta, min_fi, not_excluded_pos)
             #print("Tiempo:",time.time()-t_s)
         # We return the features already selected, and the columns that weren't deleted.
-        return S_pos + not_excluded_pos
+        # Also, we return the MI.
+        mi = 0.0
+        for fi in F_pos:
+            mi += self.mutual_information_fc(f_index=fi,log_base=2,data=X)
+        return (S_pos + not_excluded_pos, mi)
 
 
     #------------------#
@@ -727,13 +725,102 @@ class Informacion:
             #print("Min:", min_delta, min_fi, not_excluded_pos)
             #print("Tiempo:",time.time()-t_s)
         # We return the features already selected, and the columns that weren't deleted.
-        return S_pos + not_excluded_pos
+        delta = self.TestDelta(data=X,k=k)
+        return (S_pos + not_excluded_pos, delta)
 
 
     # ALL TOGETHER #
 
-    # Está mal la parte del Delta todavía
     def filter_MI_Delta(self, k=1, num_features = None, subset_indexes = None):
+        """
+        Greedy minimizing algorithm.
+        A Filter Algorithm based on the mix of MI and Delta Test.
+
+        Input: k for kth nearest neighbor, num_features for how many features we would like,
+        subset_indexes if we'd like to start with some features already selected.
+
+        Output: The indexes of the features selected.
+        """
+        # We initialize some items.
+        features = 0
+        F_pos = list(range(self.n_cols))
+        # We will be deleting columns and positions from F_pos. To return the indexes of the features selected,
+        # not_excluded_pos control is really important.
+        not_excluded_pos = list(range(self.n_cols))
+        S_pos = subset_indexes
+        # We will manipulate X so we need to copy it.
+        X = copy(self.X)
+        # By default, if number of features we will want is not determined, then it will be the truncation of the half.
+        if num_features is None:
+            features = int(self.n_cols/2)
+        else:
+            features = num_features
+        assert(features < self.n_cols)
+        # We check if there are already features selected (and remove them from X).
+        if S_pos is None:
+            S_pos = []
+        else:
+            for i in S_pos:
+                X = delete(arr=X, obj=i, axis=1)
+                # F_pos and not_excluded_pos must have the same number of indexes, but
+                # not_excluded_pos must have the control of the indexes of the original X.
+                # So if there are features already selected, they will not be part
+                # of the algorithm.
+                del not_excluded_pos[i]
+            F_pos = list(range(self.n_cols - len(S_pos)))
+
+        # The initialization of delta_so_far, to check if we reach to a delta = 0.
+        delta_so_far = -1
+        t_s = 0
+        # Number of features deleted (number of iterations in the big loop).
+        deleted_features = 0
+        # If we need n features, it's the same to N - (number_of_features_already_selected + number_of_features_deleted) == n.
+        while (self.n_cols - len(S_pos) - deleted_features) != features:
+            t_s = time.time()
+            max_mi_delta = -9999
+            max_fi = -1
+            # For each feature, we copy X, delete the feature (column),
+            # apply delta and for the rest of the features we sum the MI between each feature and the class,
+            # then update the minimum. And repeat.
+            for fi in F_pos:
+                X_aux = delete(arr=X, obj=fi, axis=1)
+                # We calculate the delta.
+                delta = self.TestDelta(data=X_aux,k=k)
+                # We calculate the MI: the sum of the MI between the features fj and the class.
+                # We control the indexes of the rest of the available features.
+                F_sub_pos = F_pos[:fi] + [i-1 for i in F_pos[fi+1:]]
+                #print(F_pos, F_sub_pos)
+                mi = 0.0
+                for fj in F_sub_pos:
+                    mi += self.mutual_information_fc(f_index=fj,log_base=2,data=X_aux)
+                # We maximize the MI and minimize the Delta.
+                # In other words, we maximize (MI - Delta).
+                mi_delta = mi - delta
+                #print(mi_delta)
+                # We update the maximum.
+                if mi_delta > max_mi_delta:
+                    max_mi_delta = mi_delta
+                    max_fi = fi
+            # We delete the feature with the maximum.
+            X = delete(arr=X, obj=max_fi, axis=1)
+            deleted_features += 1
+            # We update the indexes to iterate with.
+            F_pos = F_pos[:max_fi] + [i-1 for i in F_pos[max_fi+1:]]
+            # We update the list that controls the features of the original X.
+            # Also we return the MI and the Delta.
+            mi = 0.0
+            for fi in F_pos:
+                mi += self.mutual_information_fc(f_index=fi,log_base=2,data=X)
+            delta = self.TestDelta(data=X,k=k)
+            del not_excluded_pos[max_fi]
+
+            #print("Min:", min_delta, min_fi, not_excluded_pos)
+            #print("Tiempo:",time.time()-t_s)
+        # We return the features already selected, and the columns that weren't deleted.
+        return (S_pos + not_excluded_pos, mi, delta)
+
+    # Está mal la parte del Delta todavía
+    def _MI_Delta(self, k=1, num_features = None, subset_indexes = None):
         """
         Maximum Relevance Minimum Redundancy algorithm.
         A Filter Algorithm based on Mutual Information.
