@@ -1,0 +1,28 @@
+1) Cómo implemento Mutual Information (info.py -> mutual_informacion_fc())
+
+Usando p como probabilidad uniforme, tenemos que p(x,y) es cuántas veces X=x e Y=y. Es decir,
+recorres el vector donde X=x, y miras las Y que coinciden.
+Ejemplo: si X=x en x1,x4,x7 , guardas y1 y contador=1. Si y4=y1, contador +1. Si y7=y1, contador +1.
+¿Que no? Pues después de calcular pxy, px, py, y sumar (fórmula), guardas y4 y contador=1.
+Si y7=y4, contador +1. Y así.
+
+Esto es con VARIABLE DISCRETA. Entonces ponemos que X son enteros.
+
+PREGUNTA: ¿Y son enteros también?
+
+Tenemos una X de 6000 filas.
+
+PREGUNTA: ¿Qué pasa si X e Y no coinciden porque puede tomar cada xi e yj valores
+entre 0 y 100? ¿Ponemos valores más pequeños?
+
+Creo que por definición he implementado cosas bien, pero que en la práctica
+no coinciden los xi con los yj y sale una información mutua horrorosa.
+
+
+
+2) Si tenemos X de 4 variables, y Y(x1,x2,x3,x4); y ahora añadimos más variables en X.
+
+PREGUNTA: ¿'Y' debe cambiar? ¿O sigue siendo Y(x1,x2,x3,x4)?
+
+
+3) Quitando las variables extras de 2), ¿al aplicar Delta (estimación de la varianza del ruido) debería salir 0?

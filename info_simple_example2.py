@@ -10,21 +10,27 @@ import numpy as np
 seed = 13
 np.random.seed(seed)
 
-# We create a data of 6 columns, 4 columns of random numbers from 0 to 100.
-# Then a 5th column where x_5 = x_2 + 0.8*random
-# And a 6th column where x_6 = x_1 + 0.3*x_3
-data = np.random.rand(6000,6)*100
+data = np.around(np.random.rand(6000,6)*100)
 # Y function is number (20) in page 120 of https://sci-hub.tw/10.1016/S0893-6080(03)00169-2
 # Y(X) = 10 sin(pi x1 x2) + 20(x3 - 0.5)^2 + 10x4
 Y = []
 for row in data:
-    Y.append( 10*np.sin(np.pi * row[0] * row[1]) + 20*(row[2] - 0.5)**2 + 10*row[3] )
+    Y.append(2*row[0] + ((row[1] + row[2])**2)/2 - 3*row[3] )
+    #Y.append( 10*np.sin(np.pi * row[0] * row[1]) + 20*(row[2] - 0.5)**2 + 10*row[3] )
 Y = np.array(Y, np.float64)
+data = np.array(data, np.int64)
 
-# We pass from string to float, and we drop the line naming the features.
-data = np.array(data, np.float64)
+info = info.Informacion(X=data,Y=Y)
 
+print(data)
 print(Y)
+
+print()
+print("MI:", info.mutual_information(log_base=2))
+print("Delta:", info.TestDelta())
+print()
+print("MI without extra features:", info.mutual_information(data=data[...,:-2],log_base=2))
+print("Delta without extra features:", info.TestDelta(data=data[...,:-2]))
 
 # info_object = info.Informacion(X=data,last_feature_is_Y=True)
 #

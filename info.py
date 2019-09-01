@@ -333,6 +333,7 @@ class Informacion:
                     else:
                         i += 1
                 pxy = cont_y / self.n_rows
+                #print(cont_y)
                 # Single Entropies
                 px = values_x.get(x) / self.n_rows
                 py = values_y.get(y) / self.n_rows
@@ -474,6 +475,21 @@ class Informacion:
         print(time.time() - t_s)
         return summation
 
+    def mutual_information(self,log_base, data=None):
+        X = None
+        n_cols = 0
+        if data is None:
+            X = self.X
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_cols = X.shape[1]
+        # We calculate the MI: the sum of the MI between the features fj and the class.
+        mi = 0.0
+        for fi in range(n_cols):
+            mi += self.mutual_information_fc(f_index=fi,log_base=2,data=X)
+        return (mi/n_cols)
+
     def mRMR_MI(self, num_features = None, subset_indexes = None):
         """
         Maximum Relevance Minimum Redundancy algorithm.
@@ -577,20 +593,18 @@ class Informacion:
             t_s = time.time()
             max_mi = -9999
             max_fi = -1
-            # For each feature, we copy X, delete the feature (column), for the rest of the features we sum the MI between each feature and the class, then update the maximum. And repeat.
+            # For each feature, we copy X, delete the feature (column),
+            # for the rest of the features we sum the MI between each feature and the class,
+            # then update the maximum. And repeat.
             for fi in F_pos:
                 X_aux = delete(arr=X, obj=fi, axis=1)
-                # We control the indexes of the rest of the available features.
-                F_sub_pos = F_pos[:fi] + [i-1 for i in F_pos[fi+1:]]
-                # We calculate the MI: the sum of the MI between the features fj and the class.
-                mi = 0.0
-                for fj in F_sub_pos:
-                    mi += self.mutual_information_fc(f_index=fj,log_base=2,data=X_aux)
+                # We calculate the MI.
+                mi = self.mutual_information(log_base=2,data=X_aux)
                 # We update the maximum.
                 if mi > max_mi:
                     max_mi = mi
                     max_fi = fi
-            # We delete the feature with the minimum delta.
+            # We delete the feature which provided the maximum delta.
             X = delete(arr=X, obj=max_fi, axis=1)
             deleted_features += 1
             # We update the indexes to iterate with.
@@ -787,12 +801,8 @@ class Informacion:
                 # We calculate the delta.
                 delta = self.TestDelta(data=X_aux,k=k)
                 # We calculate the MI: the sum of the MI between the features fj and the class.
-                # We control the indexes of the rest of the available features.
-                F_sub_pos = F_pos[:fi] + [i-1 for i in F_pos[fi+1:]]
-                #print(F_pos, F_sub_pos)
-                mi = 0.0
-                for fj in F_sub_pos:
-                    mi += self.mutual_information_fc(f_index=fj,log_base=2,data=X_aux)
+                # We calculate the MI.
+                mi = self.mutual_information(log_base=2,data=X_aux)
                 # We maximize the MI and minimize the Delta.
                 # In other words, we maximize (MI - Delta).
                 mi_delta = mi - delta

@@ -28,14 +28,19 @@ for row in data:
 # Y(X) = 10 sin(pi x1 x2) + 20(x3 - 0.5)^2 + 10x4
 Y = []
 for row in data:
-    Y.append( 10*np.sin(np.pi * row[0] * row[1]) + 20*(row[2] - 0.5)**2 + 10*row[3] )
+    Y.append(2*row[0] + ((row[1] + row[2])**2)/2 - 3*row[3] )
+    #Y.append( 10*np.sin(np.pi * row[0] * row[1]) + 20*(row[2] - 0.5)**2 + 10*row[3] )
 Y = np.array(Y, np.float64)
-
-# We pass from string to float, and we drop the line naming the features.
 data = np.array(data, np.float64)
 
-print(Y)
+info = info.Informacion(X=data,Y=Y)
 
+print()
+print("MI:", info.mutual_information(log_base=2))
+print("Delta:", info.TestDelta())
+print()
+print("MI without extra features:", info.mutual_information(data=data[...,:-2],log_base=2))
+print("Delta without extra features:", info.TestDelta(data=data[...,:-2]))
 # info_object = info.Informacion(X=data,last_feature_is_Y=True)
 #
 # print()
