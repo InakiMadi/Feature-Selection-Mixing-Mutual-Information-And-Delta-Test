@@ -1,10 +1,5 @@
 #!/usr/bin/env python
-"""
-Script to calculate Mutual Information between two discrete random variables
 
-Roberto maestre - rmaestre@gmail.com
-Bojan Mihaljevic - boki.mihaljevic@gmail.com
-"""
 from __future__ import division
 from numpy  import array, shape, where, in1d, intersect1d, asarray, copy, delete, int64, float64, argmax, sum
 import math
