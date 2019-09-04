@@ -15,8 +15,8 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 from sklearn.decomposition import PCA
 from sklearn.model_selection import cross_val_predict
+
 import matplotlib.pyplot as plt
-import mutual_info
 
 class Informacion:
 
@@ -78,6 +78,144 @@ class Informacion:
             return summation
         else:
             return - summation
+
+
+    def entropy(self, log_base=2, data=None,debug = False):
+        suma = 0.0
+        X = None
+        n_cols = 0
+        n_rows = 0
+        if data is None:
+            X = self.X
+            n_rows = self.n_rows
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_rows = X.shape[0]
+            n_cols = X.shape[1]
+
+        A = []
+        B = []
+        C = []
+        D = []
+        E = []
+        F = []
+        G = []
+        H = []
+        I = []
+        J = []
+        K = []
+        L = []
+        A = set(X[:,0])
+        if 1 < n_cols:
+            B = set(X[:,1])
+            if 2 < n_cols:
+                C = set(X[:,2])
+                if 3 < n_cols:
+                    D = set(X[:,3])
+                    if 4 < n_cols:
+                        E = set(X[:,4])
+                        if 5 < n_cols:
+                            F = set(X[:,5])
+                            if 6 < n_cols:
+                                G = set(X[:,6])
+                                if 7 < n_cols:
+                                    H = set(X[:,7])
+                                    if 8 < n_cols:
+                                        I = set(X[:,8])
+                                        if 9 < n_cols:
+                                            J = set(X[:,9])
+                                            if 10 < n_cols:
+                                                K = set(X[:,10])
+                                                if 11 < n_cols:
+                                                    L = set(X[:,11])
+        joint = []
+        for a in A:
+            joint = where( X[:,0]==a )[0].tolist()
+            if len(B) == 0:
+                p = len(joint) / n_rows
+                if p > 0.0:
+                    suma += p * math.log(p, log_base)
+            else:
+                for b in B:
+                    joint = [i for i in joint if i in where( X[:,1]==b )[0].tolist() ]
+                    if len(C) == 0:
+                        p = len(joint) / n_rows
+                        if p > 0.0:
+                            suma += p * math.log(p, log_base)
+                    else:
+                        for c in C:
+                            joint = [i for i in joint if i in where( X[:,2]==c )[0].tolist() ]
+                            if len(D) == 0:
+                                p = len(joint) / n_rows
+                                if p > 0.0:
+                                    suma += p * math.log(p, log_base)
+                            else:
+                                for d in D:
+                                    joint = [i for i in joint if i in where( X[:,3]==d )[0].tolist() ]
+                                    if len(E) == 0:
+                                        p = len(joint) / n_rows
+                                        if p > 0.0:
+                                            suma += p * math.log(p, log_base)
+                                    else:
+                                        for e in E:
+                                            joint = [i for i in joint if i in where( X[:,4]==e )[0].tolist() ]
+                                            if len(F) == 0:
+                                                p = len(joint) / n_rows
+                                                if p > 0.0:
+                                                    suma += p * math.log(p, log_base)
+                                            else:
+                                                for f in F:
+                                                    joint = [i for i in joint if i in where( X[:,5]==f )[0].tolist() ]
+                                                    if len(G) == 0:
+                                                        p = len(joint) / n_rows
+                                                        if p > 0.0:
+                                                            suma += p * math.log(p, log_base)
+                                                    else:
+                                                        for g in G:
+                                                            joint = [i for i in joint if i in where( X[:,6]==g )[0].tolist() ]
+                                                            if len(H) == 0:
+                                                                p = len(joint) / n_rows
+                                                                if p > 0.0:
+                                                                    suma += p * math.log(p, log_base)
+                                                            else:
+                                                                for h in H:
+                                                                    joint = [i for i in joint if i in where( X[:,7]==h )[0].tolist() ]
+                                                                    if len(I) == 0:
+                                                                        p = len(joint) / n_rows
+                                                                        if p > 0.0:
+                                                                            suma += p * math.log(p, log_base)
+                                                                    else:
+                                                                        for ii in I:
+                                                                            joint = [i for i in joint if i in where( X[:,8]==ii )[0].tolist() ]
+                                                                            if len(J) == 0:
+                                                                                p = len(joint) / n_rows
+                                                                                if p > 0.0:
+                                                                                    suma += p * math.log(p, log_base)
+                                                                            else:
+                                                                                for j in J:
+                                                                                    joint = [i for i in joint if i in where( X[:,9]==j )[0].tolist() ]
+                                                                                    if len(K) == 0:
+                                                                                        p = len(joint) / n_rows
+                                                                                        if p > 0.0:
+                                                                                            suma += p * math.log(p, log_base)
+                                                                                    else:
+                                                                                        for k in K:
+                                                                                            joint = [i for i in joint if i in where( X[:,10]==k )[0].tolist() ]
+                                                                                            if len(L) == 0:
+                                                                                                p = len(joint) / n_rows
+                                                                                                if p > 0.0:
+                                                                                                    suma += p * math.log(p, log_base)
+                                                                                            else:
+                                                                                                for l in L:
+                                                                                                    joint = [i for i in joint if i in where( X[:,11]==l )[0].tolist() ]
+                                                                                                    p = len(joint) / n_rows
+                                                                                                    if p > 0.0:
+                                                                                                        suma += p * math.log(p, log_base)
+        if suma == 0.0:
+            return suma
+        else:
+            return -suma
 
 
 
@@ -210,7 +348,7 @@ class Informacion:
     #     for i in range(n_cols):
     #         mi += self.single_entropy(data=X[:,i])
     #     return mi
-    def mutual_information(self,data=None,log_base=2,k=5):
+    def mutual_information(self,data=None,log_base=2):
         X = None
         n_cols = 0
         if data is None:
@@ -221,26 +359,32 @@ class Informacion:
             n_cols = X.shape[1]
         X = self.unir(X,self.Y)
         n_cols += 1
-        n_rows = self.n_rows
         mi = 0.0
-        if n_cols == 2:
-            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
-                                                  array(X[:,1].reshape(n_rows,1),float64)),k)
-        elif n_cols == 3:
-            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
-                                                  array(X[:,1].reshape(n_rows,1),float64),
-                                                  array(X[:,2].reshape(n_rows,1),float64)),k)
-        elif n_cols == 4:
-            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
-                                                  array(X[:,1].reshape(n_rows,1),float64),
-                                                  array(X[:,2].reshape(n_rows,1),float64),
-                                                  array(X[:,3].reshape(n_rows,1),float64)),k)
-        elif n_cols == 5:
-            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
-                                                  array(X[:,1].reshape(n_rows,1),float64),
-                                                  array(X[:,2].reshape(n_rows,1),float64),
-                                                  array(X[:,3].reshape(n_rows,1),float64),
-                                                  array(X[:,4].reshape(n_rows,1),float64)),k)
+        if n_cols%2 == 0:
+            mi -= self.entropy(data=X,log_base=log_base)
+        else:
+            mi += self.entropy(data=X,log_base=log_base)
+        # Todas las posibilidades con N columnas (2^N)
+        for i in range(1,2**n_cols-1):
+            # Obtenemos el número en binario.
+            bin_i = bin(i)[2:]
+            # Añadimos los 0 al principio que falten.
+            # Por ejemplo, para 7 columnas, el 5 ha de ser 0000101.
+            for j in range(n_cols - len(bin_i)):
+                bin_i = '0' + bin_i
+            # Ahora, añadimos las posiciones de los '1' en cols.
+            cols = []
+            for j in range( len(bin_i) ):
+                if bin_i[j] == '1':
+                    cols.append(j)
+            if len(cols) == 1:
+                mi += self.single_entropy(data=X[:,cols],log_base=log_base)
+            elif len(cols) == 2:
+                mi -= self.entropy_2(data=X[:,cols],log_base=log_base)
+            elif len(cols)%2 == 0:
+                mi -= self.entropy(data=X[:,cols],log_base=log_base)
+            else:
+                mi += self.entropy(data=X[:,cols],log_base=log_base)
 
         return mi
 
@@ -276,6 +420,7 @@ class Informacion:
             # Realizamos la MI en las columnas cols.
             mi.append(self.mutual_information(data=X[:,cols]))
         # Ahora devolvemos el máximo y las columnas usadas
+        print(mi)
         pos_max = argmax(mi)
         bin_pos_max = bin(pos_max)[2:]
         # Añadimos los 0 al principio que falten.
@@ -289,7 +434,7 @@ class Informacion:
         # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
         if len(cols) == 0:
             cols = list(range(n_cols))
-        return (cols,mi[pos_max],mi)
+        return (cols,mi[pos_max])
 
 
     #------------------#

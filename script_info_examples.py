@@ -2,7 +2,7 @@ import numpy as np
 import info_examples
 import info
 import csv
-
+import mutual_info
 
 
 seed = 13
@@ -14,7 +14,7 @@ with open('datos/exampleaaa.csv', mode='w', newline='') as file:
     writer = csv.writer(file, delimiter=';')
 
     writer.writerow(["Variables en X:",1, "4x^2 + 3","Sin ruido"])
-    for i in range(1,4+1):
+    for i in range(1,3+1):
         # Y(x) = 4x^2 + 3
         X,Y = info_examples.genera_XY(n_rows,i,100, (lambda x: 4*x**2 + 3) ,[0], seed=seed)
         info_o = info.Informacion(X=X,Y=Y)
@@ -23,8 +23,8 @@ with open('datos/exampleaaa.csv', mode='w', newline='') as file:
         delta = info_o.TestDelta()
         fd = info_o.brute_force_Delta()
         print(i,"variables en X:")
-        print("   ",mi, "  -  ",fmi)
-        print("   ",delta, "  -  ",fd)
+        print("   MI:",mi, "  -  ",fmi)
+        #print("   Delta:",delta, "  -  ",fd)
 
         writer.writerow([mi,fmi[1],fmi[1]-mi,fmi[0], "", delta,fd[1],delta-fd[1],fd[0]])
 
@@ -44,5 +44,5 @@ with open('datos/exampleaaa.csv', mode='w', newline='') as file:
         delta = info_o.TestDelta()
         fd = info_o.brute_force_Delta()
         print(i,"variables en X:")
-        print("   ",mi, "  -  ",fmi)
-        print("   ",delta, "  -  ",fd)
+        print("   MI:",mi, "  -  ",fmi)
+        #print("   Delta:",delta, "  -  ",fd)
