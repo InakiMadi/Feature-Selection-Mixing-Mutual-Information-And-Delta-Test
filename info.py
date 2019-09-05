@@ -280,64 +280,6 @@ class Informacion:
                     print(time.time() - t_s)
         return summation
 
-    def mutual_information_1(self, log_base=2, data = None, debug = False):
-        """
-        Calculate and return Mutual information between two random variables
-        """
-        X = None
-        if data is None:
-            X = copy(self.X)
-        else:
-            X = data
-
-        # Check if index are into the bounds
-        assert (f_index >= 0 and f_index <= n_cols)
-        assert(len(self.Y) > 0)
-        # Variable to return MI
-        summation = 0.0
-        # Get uniques values of random variables
-        f = X[:]
-        values_x = Counter(f)
-        values_y = Counter(self.Y)
-        # Print debug info
-        if debug:
-            print('MI between')
-            print(f)
-            print(self.Y)
-        # For each random
-        for x in values_x.keys():
-            # MI
-            posiciones_x = where(f==x)[0].tolist()
-            # We will find if Y_i = y_i when X_i = x_i. Each time
-            # this happens, we will remove the position from posiciones_x.
-            # When we reach the end of posiciones_x, we update summation
-            # and we will look for the y_is of the rest of posiciones_x, and repeat.
-            while len(posiciones_x) > 0:
-                y = self.Y[posiciones_x[0]]
-                cont_y = 1
-                del posiciones_x[0]
-                i = 0
-                while i < len(posiciones_x):
-                    z = self.Y[posiciones_x[i]]
-                    if y == z:
-                        cont_y += 1
-                        del posiciones_x[i]
-                    else:
-                        i += 1
-                pxy = cont_y / self.n_rows
-                #print(cont_y)
-                # Single Entropies
-                px = values_x.get(x) / self.n_rows
-                py = values_y.get(y) / self.n_rows
-                # Summation
-                if pxy > 0.0:
-                    summation += pxy * math.log((pxy / (px*py)), log_base)
-                if debug:
-                    print('(%d,%d) x(%d,%d,%d) px:%f py:%f pxy:%f' % (x, y, values_x.get(x),values_y.get(y),cont_y, px, py, pxy))
-                    print("  log: ",(pxy/(px*py)))
-                    print("  suma:",summation)
-        return summation
-
     def mutual_information(self,data=None,log_base=2,k=1,normalized=False):
         X = None
         n_cols = 0
@@ -644,6 +586,33 @@ class Informacion:
             cols = list(range(self.n_cols))
         return (cols,mi_delta[pos_max],mi_delta)
 
+    def MI_Delta(self,arr_mi,arr_delta,alpha=1,beta=1):
+        """
+        A Force-brute algorithm that returns the minimum of all the Delta Tests,
+        ordered by position in bits.
+
+        For example, the Delta Test in position 5 means the Delta Test of '00101', which means
+        the Delta Test of columns 2 and 4 (X[:,[2,4]]).
+
+        Output: Returns the columns that reach the min Delta Test from every possibility (2^N)
+        and the min.
+        """
+        mi_delta = [(alpha*arr_mi[i] - beta*arr_delta[i]) for i in range(len(arr_mi))]
+        # Ahora devolvemos el máximo y las columnas usadas
+        pos_max = argmax(mi_delta)
+        bin_pos_max = bin(pos_max)[2:]
+        # Añadimos los 0 al principio que falten.
+        for j in range(self.n_cols - len(bin_pos_max)):
+            bin_pos_max = '0' + bin_pos_max
+        # Ahora, añadimos las posiciones de los '1' en cols (sin incluir la Y)
+        cols = []
+        for j in range( len(bin_pos_max) ):
+            if bin_pos_max[j] == '1':
+                cols.append(j)
+        # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
+        if len(cols) == 0:
+            cols = list(range(self.n_cols))
+        return (cols,mi_delta[pos_max],mi_delta)
 
     #
     # MORE ALGORITHMS
@@ -1054,38 +1023,8 @@ class Informacion:
 
         return (mse,y_test,y_predicted)
 
-    #
-    # NOT USED
-    #
 
-    def MI_Delta(self,arr_mi,arr_delta,alpha=1,beta=1):
-        """
-        A Force-brute algorithm that returns the minimum of all the Delta Tests,
-        ordered by position in bits.
-
-        For example, the Delta Test in position 5 means the Delta Test of '00101', which means
-        the Delta Test of columns 2 and 4 (X[:,[2,4]]).
-
-        Output: Returns the columns that reach the min Delta Test from every possibility (2^N)
-        and the min.
-        """
-        mi_delta = [(alpha*arr_mi[i] - beta*arr_delta[i]) for i in range(len(arr_mi))]
-        # Ahora devolvemos el máximo y las columnas usadas
-        pos_max = argmax(mi_delta)
-        bin_pos_max = bin(pos_max)[2:]
-        # Añadimos los 0 al principio que falten.
-        for j in range(self.n_cols - len(bin_pos_max)):
-            bin_pos_max = '0' + bin_pos_max
-        # Ahora, añadimos las posiciones de los '1' en cols (sin incluir la Y)
-        cols = []
-        for j in range( len(bin_pos_max) ):
-            if bin_pos_max[j] == '1':
-                cols.append(j)
-        # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
-        if len(cols) == 0:
-            cols = list(range(self.n_cols))
-        return (cols,mi_delta[pos_max],mi_delta)
-
+        
 
     def max_mas_cercano(self,cols,mi):
         mii = copy(mi[2])
