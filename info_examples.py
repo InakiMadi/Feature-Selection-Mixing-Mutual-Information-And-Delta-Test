@@ -12,7 +12,7 @@ import time
     Y(x1,x2,x3,x4) = 10 sin(pi x1 x2) + 20(x3 - 0.5)^2 + 10x4
 """
 
-def genera_X(n_rows,n_cols,max_x=1):
+def genera_X(n_rows,n_cols,max_x=1,discrete=False):
     X = np.random.rand(n_rows,n_cols)
 
     #Restamos por la media y dividimos por la desviación típica
@@ -24,12 +24,21 @@ def genera_X(n_rows,n_cols,max_x=1):
     #X = np.around(X*max_x)
     #X = np.array(X, np.int64)
     X = X*max_x
-    X = np.array(X, np.float64)
+    if discrete:
+        X = X*100
+        X = np.array(X, np.int64)
+    else:
+        X = np.array(X,np.float64)
     return X
 
-def genera_Y(X,Y_function,Y_indexes,ruido=0,porc_ruido=0):
+def genera_Y(X,Y_function,Y_indexes,ruido_unif=False,ruido_norm=False,porc_ruido=0,discrete=False):
     Y = []
+    ruido = 0
     for row in X:
+        if ruido_unif:
+            ruido = np.random.rand()
+        if ruido_norm:
+            ruido = np.random.normal(0.5,0.1)
         if len(Y_indexes) == 1:
             #Y.append( round( Y_function(row[Y_indexes[0]]) + ruido*porc_ruido ) )
             Y.append( Y_function(row[Y_indexes[0]]) + ruido*porc_ruido )
@@ -41,9 +50,15 @@ def genera_Y(X,Y_function,Y_indexes,ruido=0,porc_ruido=0):
         elif len(Y_indexes) == 4:
             Y.append( Y_function(row[Y_indexes[0]], row[Y_indexes[1]], row[Y_indexes[2]], row[Y_indexes[3]]) + ruido*porc_ruido )
         elif len(Y_indexes) == 5:
-            # Y(X) = 10 sin(pi x1 x2) + 20(x3 - 0.5)^2 + 10x4 +5x5
             Y.append( Y_function(row[Y_indexes[0]], row[Y_indexes[1]], row[Y_indexes[2]], row[Y_indexes[3]], row[Y_indexes[4]]) + ruido*porc_ruido )
-    Y = np.array(Y, np.float64)
+        elif len(Y_indexes) == 6:
+            Y.append( Y_function(row[Y_indexes[0]], row[Y_indexes[1]], row[Y_indexes[2]], row[Y_indexes[3]], row[Y_indexes[4]], row[Y_indexes[5]]) + ruido*porc_ruido )
+        elif len(Y_indexes) == 7:
+            Y.append( Y_function(row[Y_indexes[0]], row[Y_indexes[1]], row[Y_indexes[2]], row[Y_indexes[3]], row[Y_indexes[4]], row[Y_indexes[5]], row[Y_indexes[6]]) + ruido*porc_ruido )
+    if discrete:
+        Y = np.array(Y, np.int64)
+    else:
+        Y = np.array(Y,np.float64)
     return Y
 
 
@@ -51,20 +66,20 @@ def genera_Y(X,Y_function,Y_indexes,ruido=0,porc_ruido=0):
 
 # X_orig,Y_orig = info_examples.genera_XY(n_rows,1,100, (lambda x: 4*x**2 + 3) ,[0],seed=seed)
 
-def ejemplo(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1,ruido=0,porc_ruido=0,
+def ejemplo(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1,ruido_unif=False,ruido_norm=False,porc_ruido=0,
             alpha=1,beta=1,
-            seed=None):
+            seed=None, discrete=False):
     if seed is not None:
         np.random.seed(seed)
-    X = genera_X(n_rows,start_cols,max_x)
-    Y = genera_Y(X, Y_function,Y_indexes,ruido,porc_ruido)
+    X = genera_X(n_rows,start_cols,max_x,discrete)
+    Y = genera_Y(X, Y_function,Y_indexes,ruido_unif,ruido_norm,porc_ruido,discrete)
     info_o = info.Informacion(X=X,Y=Y)
     with open('datos/'+name_file+'.csv', mode='w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
 
         for i in range(start_cols,finish_cols+1):
             if i > start_cols:
-                X_nuevo = genera_X(n_rows,1,max_x).reshape(-1)
+                X_nuevo = genera_X(n_rows,1,max_x,discrete=discrete).reshape(-1)
                 info_o.add_column_to_X( X_nuevo )
 
             t_s = time.time()
@@ -77,11 +92,12 @@ def ejemplo(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1
             delta = info_o.TestDelta()
             t_delta = time.time()-t_s
             t_s = time.time()
-            fd = info_o.brute_force_Delta()
+            fd = info_o.brute_force_Delta(k=5)
             t_fd = time.time()-t_s
-            t_s = time.time()
-            md = info_o.brute_force_MI_Delta(alpha=alpha,beta=beta)
-            t_md = time.time()-t_s
+            md = info_o.MI_Delta(arr_mi=fmi[2],arr_delta=fd[2])
+            # t_s = time.time()
+            # md = info_o.brute_force_MI_Delta(alpha=alpha,beta=beta,k=5)
+            # t_md = time.time()-t_s
             # print(i,"variables en X:")
             # print("   MI:",fmi[0], "  -  ",fmi[1], " - ",mi)
             # print("   Delta:",fd[0], "  -  ",fd[1], " - ",delta)
@@ -99,17 +115,30 @@ def ejemplo(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1
             # 0-6 , 7-14, 15-20, 21-24, 25
             writer.writerow([fmi[0],fd[0],md[0],"",mi,delta,"",
                             fmi[1],mi-fmi[1], "", fd[1],delta-fd[1],"",md[1],"",
-                            t_mi,t_fmi,t_delta,t_fd,t_md,"",
+                            t_mi,t_fmi,t_delta,t_fd,"",
                             fmi_t,fd_t,md_t,"",
                             Y_indexes])
+        # print()
+        # print()
+        # print("REGRESSION. E_out:")
+        # orig = info_o.linear_regression_lerner(seed=seed)[0]
+        # print("Original:",orig)
+        # mi_l = info_o.linear_regression_lerner(cols_pos= fmi[0] ,seed=seed)[0]
+        # print("Brute Force MI:",mi_l)
+        # delta_l = info_o.linear_regression_lerner(cols_pos= fd[0] ,seed=seed)[0]
+        # print("Brute Force Delta:",delta_l)
+        # mix_l = info_o.linear_regression_lerner(cols_pos= md[0] ,seed=seed)[0]
+        # print("Brute Force MI-Delta:",mix_l)
+        # writer.writerow([])
+        # writer.writerow([orig,mi_l,delta_l,mix_l])
 
-def ejemplo_todos_algoritmos(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1,ruido=0,porc_ruido=0,
+def ejemplo_todos_algoritmos(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1,ruido_unif=False,ruido_norm=False,porc_ruido=0,
             alpha=1,beta=1,
             seed=None):
     if seed is not None:
         np.random.seed(seed)
     X = genera_X(n_rows,start_cols,max_x)
-    Y = genera_Y(X, Y_function,Y_indexes,ruido,porc_ruido)
+    Y = genera_Y(X, Y_function,Y_indexes,ruido_unif,ruido_norm,porc_ruido)
     info_o = info.Informacion(X=X,Y=Y)
     with open('datos/'+name_file+'.csv', mode='w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
@@ -180,12 +209,12 @@ def ejemplo_todos_algoritmos(name_file,n_rows,start_cols,finish_cols,Y_function,
                             Y_indexes])
 
 
-def ejemplo_MIDT(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1,ruido=0,porc_ruido=0,
+def ejemplo_MIDT(name_file,n_rows,start_cols,finish_cols,Y_function,Y_indexes,max_x=1,ruido_unif=False,ruido_norm=False,porc_ruido=0,
             seed=None):
     if seed is not None:
         np.random.seed(seed)
     X = genera_X(n_rows,start_cols,max_x)
-    Y = genera_Y(X, Y_function,Y_indexes,ruido,porc_ruido)
+    Y = genera_Y(X, Y_function,Y_indexes,ruido_unif,ruido_norm,porc_ruido)
     nums = [0.5,1,1.5,2,3,4,5,10]
 
     with open('datos/'+name_file+'.csv', mode='w', newline='') as file:

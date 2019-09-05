@@ -614,6 +614,34 @@ class Informacion:
             cols = list(range(self.n_cols))
         return (cols,mi_delta[pos_max],mi_delta)
 
+    def MI_Delta_v2(self,arr_mi,arr_delta,beta=0.01):
+        """
+        A Force-brute algorithm that returns the minimum of all the Delta Tests,
+        ordered by position in bits.
+
+        For example, the Delta Test in position 5 means the Delta Test of '00101', which means
+        the Delta Test of columns 2 and 4 (X[:,[2,4]]).
+
+        Output: Returns the columns that reach the min Delta Test from every possibility (2^N)
+        and the min.
+        """
+        mi_delta = [(arr_mi[i] + 1/(arr_delta[i]+beta)) for i in range(len(arr_mi))]
+        # Ahora devolvemos el máximo y las columnas usadas
+        pos_max = argmax(mi_delta)
+        bin_pos_max = bin(pos_max)[2:]
+        # Añadimos los 0 al principio que falten.
+        for j in range(self.n_cols - len(bin_pos_max)):
+            bin_pos_max = '0' + bin_pos_max
+        # Ahora, añadimos las posiciones de los '1' en cols (sin incluir la Y)
+        cols = []
+        for j in range( len(bin_pos_max) ):
+            if bin_pos_max[j] == '1':
+                cols.append(j)
+        # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
+        if len(cols) == 0:
+            cols = list(range(self.n_cols))
+        return (cols,mi_delta[pos_max],mi_delta)
+
     #
     # MORE ALGORITHMS
     #
@@ -1024,7 +1052,7 @@ class Informacion:
         return (mse,y_test,y_predicted)
 
 
-        
+
 
     def max_mas_cercano(self,cols,mi):
         mii = copy(mi[2])
