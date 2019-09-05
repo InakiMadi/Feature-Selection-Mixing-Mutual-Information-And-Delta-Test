@@ -40,7 +40,11 @@ class Informacion:
         return self.Y
 
     def unir(self,X,Y):
-        return insert(arr=X,obj=X.shape[1],values=Y,axis=1)
+        return insert(arr=X,obj=X.shape[1],values=Y.reshape(-1),axis=1)
+
+    def add_column_to_X(self,X_add):
+        self.X = insert(arr=self.X,obj=self.X.shape[1],values=X_add,axis=1)
+        self.n_cols += 1
 
     #-------------------------------#
     #-------------------------------#
@@ -89,7 +93,7 @@ class Informacion:
         X = None
         n_rows = self.n_rows
         if data is None:
-            X = self.X
+            X = copy(self.X)
         else:
             X = data
 
@@ -136,13 +140,153 @@ class Informacion:
             return - summation
 
 
+    def mutual_information_fc(self, f_index, log_base, data = None, debug = False):
+        """
+        Calculate and return Mutual information between two random variables
+        """
+        X = None
+        n_cols = 0
+        if data is None:
+            X = self.X
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_cols = X.shape[1]
+
+        # Check if index are into the bounds
+        assert (f_index >= 0 and f_index <= n_cols)
+        assert(len(self.Y) > 0)
+        """
+        H_X = self.single_entropy(x_index=x_index,log_base=log_base)
+        H_Y = self.single_entropy(x_index=y_index,log_base=log_base)
+        H_XY = self.entropy(x_index=x_index,y_index=y_index,log_base=log_base)
+        return H_X + H_Y - H_XY
+        """
+        # Variable to return MI
+        summation = 0.0
+        # Get uniques values of random variables
+        t_s = time.time()
+        f = X[...,f_index]
+        values_x = Counter(f)
+        values_y = Counter(self.Y)
+        # Print debug info
+        if debug:
+            print('MI between')
+            print(f)
+            print(self.Y)
+        # For each random
+        for x in values_x.keys():
+            # MI
+            posiciones_x = where(f==x)[0].tolist()
+            # We will find if Y_i = y_i when X_i = x_i. Each time
+            # this happens, we will remove the position from posiciones_x.
+            # When we reach the end of posiciones_x, we update summation
+            # and we will look for the y_is of the rest of posiciones_x, and repeat.
+            while len(posiciones_x) > 0:
+                y = self.Y[posiciones_x[0]]
+                cont_y = 1
+                del posiciones_x[0]
+                i = 0
+                while i < len(posiciones_x):
+                    z = self.Y[posiciones_x[i]]
+                    if y == z:
+                        cont_y += 1
+                        del posiciones_x[i]
+                    else:
+                        i += 1
+                pxy = cont_y / self.n_rows
+                #print(cont_y)
+                # Single Entropies
+                px = values_x.get(x) / self.n_rows
+                py = values_y.get(y) / self.n_rows
+                # Summation
+                if pxy > 0.0:
+                    summation += pxy * math.log((pxy / (px*py)), log_base)
+                if debug:
+                    print('(%d,%d) x(%d,%d,%d) px:%f py:%f pxy:%f' % (x, y, values_x.get(x),values_y.get(y),cont_y, px, py, pxy))
+                    print("  log: ",(pxy/(px*py)))
+                    print("  suma:",summation)
+                    print("Tiempo MI:")
+                    print(time.time() - t_s)
+        return summation
+
+    def mutual_information_ff(self, f_index1, f_index2, log_base, data=None, debug = False):
+        """
+        Calculate and return Mutual information between two random variables
+        """
+        X = None
+        n_cols = 0
+        if data is None:
+            X = self.X
+            n_cols = self.n_cols
+        else:
+            X = data
+            n_cols = X.shape[1]
+
+        # Check if index are into the bounds
+        assert (f_index1 >= 0 and f_index1 <= n_cols)
+        assert (f_index2 >= 0 and f_index2 <= n_cols)
+        """
+        H_X = self.single_entropy(x_index=x_index,log_base=log_base)
+        H_Y = self.single_entropy(x_index=y_index,log_base=log_base)
+        H_XY = self.entropy(x_index=x_index,y_index=y_index,log_base=log_base)
+        return H_X + H_Y - H_XY
+        """
+        # Variable to return MI
+        summation = 0.0
+        # Get uniques values of random variables
+        t_s = time.time()
+        f1 = X[...,f_index1]
+        f2 = X[...,f_index2]
+        values_x = Counter(f1)
+        values_y = Counter(f2)
+        # Print debug info
+        if debug:
+            print('MI between')
+            print(f1)
+            print(f2)
+        # For each random
+        for x in values_x.keys():
+            # MI
+            posiciones_x = where(f1==x)[0].tolist()
+            # We will find if Y_i = y_i when X_i = x_i. Each time
+            # this happens, we will remove the position from posiciones_x.
+            # When we reach the end of posiciones_x, we update summation
+            # and we will look for the y_is of the rest of posiciones_x, and repeat.
+            while len(posiciones_x) > 0:
+                y = f2[posiciones_x[0]]
+                cont_y = 1
+                del posiciones_x[0]
+                i = 0
+                while i < len(posiciones_x):
+                    z = f2[posiciones_x[i]]
+                    if y == z:
+                        cont_y += 1
+                        del posiciones_x[i]
+                    else:
+                        i += 1
+                pxy = cont_y / self.n_rows
+                # Single Entropies
+                px = values_x.get(x) / self.n_rows
+                py = values_y.get(y) / self.n_rows
+                # Summation
+                if pxy > 0.0:
+                    summation += pxy * math.log((pxy / (px*py)), log_base)
+                if debug:
+                    print('(%d,%d) x(%d,%d,%d) px:%f py:%f pxy:%f' % (x, y, values_x.get(x),values_y.get(y),cont_y, px, py, pxy))
+                    print("  log: ",(pxy/(px*py)))
+                    print("  suma:",summation)
+                    print("Tiempo MI:")
+                    print(time.time() - t_s)
+        return summation
+
     def mutual_information_1(self, log_base=2, data = None, debug = False):
         """
         Calculate and return Mutual information between two random variables
         """
         X = None
         if data is None:
-            X = self.X
+            X = copy(self.X)
         else:
             X = data
 
@@ -194,27 +338,11 @@ class Informacion:
                     print("  suma:",summation)
         return summation
 
-    # def mutual_information(self,data=None,log_base=2):
-    #     X = None
-    #     n_cols = 0
-    #     if data is None:
-    #         X = self.X
-    #         n_cols = self.n_cols
-    #     else:
-    #         X = data
-    #         n_cols = X.shape[1]
-    #     X = self.unir(X,self.Y)
-    #     n_cols += 1
-    #     mi = 0.0
-    #     mi -= self.entropy(data=X,log_base=log_base)
-    #     for i in range(n_cols):
-    #         mi += self.single_entropy(data=X[:,i])
-    #     return mi
-    def mutual_information(self,data=None,log_base=2,k=5):
+    def mutual_information(self,data=None,log_base=2,k=1,normalized=False):
         X = None
         n_cols = 0
         if data is None:
-            X = self.X
+            X = copy(self.X)
             n_cols = self.n_cols
         else:
             X = data
@@ -241,7 +369,92 @@ class Informacion:
                                                   array(X[:,2].reshape(n_rows,1),float64),
                                                   array(X[:,3].reshape(n_rows,1),float64),
                                                   array(X[:,4].reshape(n_rows,1),float64)),k)
-
+        elif n_cols == 6:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64)),k)
+        elif n_cols == 7:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64)),k)
+        elif n_cols == 8:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64),
+                                                  array(X[:,7].reshape(n_rows,1),float64)),k)
+        elif n_cols == 9:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64),
+                                                  array(X[:,7].reshape(n_rows,1),float64),
+                                                  array(X[:,8].reshape(n_rows,1),float64)),k)
+        elif n_cols == 10:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64),
+                                                  array(X[:,7].reshape(n_rows,1),float64),
+                                                  array(X[:,8].reshape(n_rows,1),float64),
+                                                  array(X[:,9].reshape(n_rows,1),float64)),k)
+        elif n_cols == 11:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64),
+                                                  array(X[:,7].reshape(n_rows,1),float64),
+                                                  array(X[:,8].reshape(n_rows,1),float64),
+                                                  array(X[:,9].reshape(n_rows,1),float64),
+                                                  array(X[:,10].reshape(n_rows,1),float64)),k)
+        elif n_cols == 12:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64),
+                                                  array(X[:,7].reshape(n_rows,1),float64),
+                                                  array(X[:,8].reshape(n_rows,1),float64),
+                                                  array(X[:,9].reshape(n_rows,1),float64),
+                                                  array(X[:,10].reshape(n_rows,1),float64),
+                                                  array(X[:,11].reshape(n_rows,1),float64)),k)
+        elif n_cols == 13:
+            mi = mutual_info.mutual_information( (array(X[:,0].reshape(n_rows,1),float64),
+                                                  array(X[:,1].reshape(n_rows,1),float64),
+                                                  array(X[:,2].reshape(n_rows,1),float64),
+                                                  array(X[:,3].reshape(n_rows,1),float64),
+                                                  array(X[:,4].reshape(n_rows,1),float64),
+                                                  array(X[:,5].reshape(n_rows,1),float64),
+                                                  array(X[:,6].reshape(n_rows,1),float64),
+                                                  array(X[:,7].reshape(n_rows,1),float64),
+                                                  array(X[:,8].reshape(n_rows,1),float64),
+                                                  array(X[:,9].reshape(n_rows,1),float64),
+                                                  array(X[:,10].reshape(n_rows,1),float64),
+                                                  array(X[:,11].reshape(n_rows,1),float64),
+                                                  array(X[:,12].reshape(n_rows,1),float64)),k)
+        if normalized:
+            mi = mi/(n_cols-1)
         return mi
 
     def brute_force_MI(self):
@@ -305,7 +518,7 @@ class Informacion:
         """
         X = None
         if data is None:
-            X = self.X
+            X = copy(self.X)
         else:
             X = data
         # p=2 means L2 distance (Euclidean).
@@ -324,7 +537,7 @@ class Informacion:
         X = None
         n_cols = 0
         if data is None:
-            X = self.X
+            X = copy(self.X)
             n_cols = self.n_cols
         else:
             X = data
@@ -351,7 +564,7 @@ class Informacion:
         delta = []
         delta.append( self.TestDelta(k=k) )
         # Todas las posibilidades con N columnas (2^N)
-        for i in range(1,2**self.n_cols):
+        for i in range(1,2**self.n_cols-1):
             # Obtenemos el número en binario.
             bin_i = bin(i)[2:]
             # Añadimos los 0 al principio que falten.
@@ -378,30 +591,62 @@ class Informacion:
                 cols.append(j)
         # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
         if len(cols) == 0:
-            cols = [0]
+            cols = list(range(self.n_cols))
         return (cols,delta[pos_min],delta)
 
 
+    def brute_force_MI_Delta(self,k=1,alpha=1,beta=1):
+        """
+        A Force-brute algorithm that returns the minimum of all the Delta Tests,
+        ordered by position in bits.
 
+        For example, the Delta Test in position 5 means the Delta Test of '00101', which means
+        the Delta Test of columns 2 and 4 (X[:,[2,4]]).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        Output: Returns the columns that reach the min Delta Test from every possibility (2^N)
+        and the min.
+        """
+        X = copy(self.X)
+        mi = []
+        delta = []
+        mi.append(self.mutual_information(data=X))
+        delta.append( self.TestDelta(k=k) )
+        # Todas las posibilidades con N columnas (2^N)
+        for i in range(1,2**self.n_cols-1):
+            # Obtenemos el número en binario.
+            bin_i = bin(i)[2:]
+            # Añadimos los 0 al principio que falten.
+            # Por ejemplo, para 7 columnas, el 5 ha de ser 0000101.
+            for j in range(self.n_cols - len(bin_i)):
+                bin_i = '0' + bin_i
+            # Ahora, añadimos las posiciones de los '1' en cols.
+            cols = []
+            for j in range( len(bin_i) ):
+                if bin_i[j] == '1':
+                    cols.append(j)
+            # Realizamos la MI en las columnas cols.
+            mi.append(self.mutual_information(data=X[:,cols]))
+            delta.append( self.TestDelta(data=self.X[:,cols],k=k) )
+        mi_delta = [(alpha*mi[i] - beta*delta[i]) for i in range(len(mi))]
+        # Ahora devolvemos el máximo y las columnas usadas
+        pos_max = argmax(mi_delta)
+        bin_pos_max = bin(pos_max)[2:]
+        # Añadimos los 0 al principio que falten.
+        for j in range(self.n_cols - len(bin_pos_max)):
+            bin_pos_max = '0' + bin_pos_max
+        # Ahora, añadimos las posiciones de los '1' en cols (sin incluir la Y)
+        cols = []
+        for j in range( len(bin_pos_max) ):
+            if bin_pos_max[j] == '1':
+                cols.append(j)
+        # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
+        if len(cols) == 0:
+            cols = list(range(self.n_cols))
+        return (cols,mi_delta[pos_max],mi_delta)
 
 
     #
-    # NOT USED
+    # MORE ALGORITHMS
     #
 
     def filter_MI(self, subset_indexes = None):
@@ -467,7 +712,6 @@ class Informacion:
                 if mi > max_mi:
                     max_mi = mi
                     max_fi = fi
-            print(mi_so_far,max_mi)
             if max_mi > mi_so_far:
                 mi_so_far = max_mi
                 # We delete the feature which provided the maximum delta.
@@ -707,82 +951,12 @@ class Informacion:
             # We update the indexes to iterate with.
             F_pos = F_pos[:max_fi] + [i-1 for i in F_pos[max_fi+1:]]
             # We update the list that controls the features of the original X.
-            # Also we return the MI and the Delta.
-            mi = 0.0
-            for fi in F_pos:
-                mi += self.mutual_information_fc(f_index=fi,log_base=2,data=X)
-            delta = self.TestDelta(data=X,k=k)
             del not_excluded_pos[max_fi]
 
             #print("Min:", min_delta, min_fi, not_excluded_pos)
             #print("Tiempo:",time.time()-t_s)
         # We return the features already selected, and the columns that weren't deleted.
-        return (S_pos + not_excluded_pos, mi, delta)
-
-    # Está mal la parte del Delta todavía
-    def _MI_Delta(self, k=1, num_features = None, subset_indexes = None):
-        """
-        Maximum Relevance Minimum Redundancy algorithm.
-        A Filter Algorithm based on Mutual Information.
-        """
-        features = 0
-        F_pos = list(range(self.n_cols))
-        S_pos = subset_indexes
-        if num_features is None:
-            features = int(self.n_cols/2)
-        else:
-            features = num_features
-        assert(features < self.n_cols)
-        if S_pos is None:
-            S_pos = []
-        else:
-            F_pos = [i for i in list(range(self.n_cols)) if i not in S_pos]
-
-        deleted_features = 0
-        X = copy(self.X)
-        while len(S_pos) != features:
-            # MI
-            max_mrmr = -9999
-            max_fi = -1
-            mrmrs = []
-            fis = []
-            max_fis = []
-            for fi in F_pos:
-                relevance = self.mutual_information_fc(f_index=fi,log_base=2)
-                redundancy = 0
-                for fj in S_pos:
-                    redundancy += self.mutual_information_ff(f_index1=fi,f_index2=fj, log_base=2)
-                mrmr = 0.0
-                if len(S_pos)>0:
-                    mrmr = relevance - redundancy / len(S_pos)
-                else:
-                    mrmr = relevance - redundancy
-                mrmrs.append(mrmr)
-                max_fis.append(fi)
-                fis.append(fi)
-            # Delta
-            min_delta = 9999
-            min_fi = -1
-            deltas = []
-            min_fis = []
-            for fi in F_pos:
-                X_aux = delete(arr=X, obj=fi, axis=1)
-                delta = self.TestDelta_X(X=X_aux,k=k)
-                deltas.append(delta)
-                min_fis.append(fi)
-            #
-            real_max = -9999
-            real_fi = -1
-            for i in range(len(F_pos)):
-                aux = mrmrs[i] - deltas[i]
-                if aux > real_max:
-                    real_max = aux
-                    real_fi = fis[i]
-            F_pos = F_pos[:real_fi] + [i-1 for i in F_pos[real_fi+1:]]
-            S_pos.append(real_fi + deleted_features)
-            X = delete(arr=X, obj=real_fi, axis=1)
-            deleted_features += 1
-        return S_pos
+        return S_pos + not_excluded_pos
 
 
     #
@@ -801,10 +975,10 @@ class Informacion:
         else:
             X = self.X[:, cols_pos]
             x_train, x_test, y_train, y_test = train_test_split(X, self.Y, test_size=0.2, random_state=seed)
-        x_train = array(x_train, int64)
-        y_train = array(y_train, int64)
-        x_test = array(x_test, int64)
-        y_test = array(y_test, int64)
+        x_train = array(x_train, float64)
+        y_train = array(y_train, float64)
+        x_test = array(x_test, float64)
+        y_test = array(y_test, float64)
 
         # Ajuste de parámetros
         solver_final = 'newton-cg'
@@ -832,16 +1006,20 @@ class Informacion:
         p = sum(y_test == y_predicted) / len(y_test)
         # Devolvemos el porcentaje bien clasificado, el porcentaje mal clasificado,
         # el vector verdadero y el vector predicho.
-        return (p,1-p, y_test,y_predicted)
+        return (1-p,p, y_test,y_predicted)
 
-    def linear_regression_lerner(self,seed = 13):
+    def linear_regression_lerner(self,cols_pos = None,seed = 0):
         x_train = []
         y_train = []
         x_test = []
         y_test = []
 
         # Separamos en train y test
-        x_train, x_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.2, random_state=seed)
+        if cols_pos is None:
+            x_train, x_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.2, random_state=seed)
+        else:
+            X = self.X[:, cols_pos]
+            x_train, x_test, y_train, y_test = train_test_split(X, self.Y, test_size=0.2, random_state=seed)
         x_train = array(x_train, float64)
         y_train = array(y_train, float64)
         x_test = array(x_test, float64)
@@ -870,44 +1048,74 @@ class Informacion:
         y_predicted = modelo_lin.predict(x_test)
         #Realizamos el MSE entre lo predicho y lo verdadero
         mse = mean_squared_error(y_test,y_predicted)
-        print( "Score de Regresión Lineal (R^2): ", modelo_lin.score(x_test,y_test) )
-        print( "E_out (MSE): ", mse )
-        print( "RSME: ", sqrt(mse) )
+        # print( "Score de Regresión Lineal (R^2): ", modelo_lin.score(x_test,y_test) )
+        # print( "E_out (MSE): ", mse )
+        # print( "RSME: ", sqrt(mse) )
 
-        return (y_test,y_predicted,mse)
-
+        return (mse,y_test,y_predicted)
 
     #
-    # PLOT
+    # NOT USED
     #
-    # No probado
-    def plot(self):
-        x_train = []
-        y_train = []
-        x_test = []
-        y_test = []
 
-        # Separamos en train y test
-        x_train, x_test, y_train, y_test = train_test_split(self.X, self.Y, test_size=0.2, random_state=seed)
-        x_train = array(x_train, float64)
-        y_train = array(y_train, float64)
-        x_test = array(x_test, float64)
-        y_test = array(y_test, float64)
+    def MI_Delta(self,arr_mi,arr_delta,alpha=1,beta=1):
+        """
+        A Force-brute algorithm that returns the minimum of all the Delta Tests,
+        ordered by position in bits.
 
-        # Visualización de datos
-        x_train2 = x_train.copy()
-        x_test2 = x_test.copy()
-        pca_train = PCA(n_components=2)
-        pca_test = PCA(n_components=2)
-        x_train2 = pca_train.fit_transform(x_train2)
-        x_test2 = pca_test.fit_transform(x_test2)
-        plt.scatter( x_train2[:,0], x_train2[:,1], c=y_train )
-        plt.xlabel("Primera característica tras dimensionalizar")
-        plt.ylabel("Segunda característica tras dimensionalizar")
-        plt.title("Clasificación del train al dimensionalizar con PCA")
-        plt.show()
-        plt.scatter( x_test2[:,0], x_test2[:,1], c=y_test )
-        plt.xlabel("Primera característica tras dimensionalizar")
-        plt.ylabel("Segunda característica tras dimensionalizar")
-        plt.title("Clasificación del test al dimensionalizar con PCA")
-        plt.show()
+        For example, the Delta Test in position 5 means the Delta Test of '00101', which means
+        the Delta Test of columns 2 and 4 (X[:,[2,4]]).
+
+        Output: Returns the columns that reach the min Delta Test from every possibility (2^N)
+        and the min.
+        """
+        mi_delta = [(alpha*arr_mi[i] - beta*arr_delta[i]) for i in range(len(arr_mi))]
+        # Ahora devolvemos el máximo y las columnas usadas
+        pos_max = argmax(mi_delta)
+        bin_pos_max = bin(pos_max)[2:]
+        # Añadimos los 0 al principio que falten.
+        for j in range(self.n_cols - len(bin_pos_max)):
+            bin_pos_max = '0' + bin_pos_max
+        # Ahora, añadimos las posiciones de los '1' en cols (sin incluir la Y)
+        cols = []
+        for j in range( len(bin_pos_max) ):
+            if bin_pos_max[j] == '1':
+                cols.append(j)
+        # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
+        if len(cols) == 0:
+            cols = list(range(self.n_cols))
+        return (cols,mi_delta[pos_max],mi_delta)
+
+
+    def max_mas_cercano(self,cols,mi):
+        mii = copy(mi[2])
+        max = mi[1]
+        mii.remove(max)
+        mmax = argmax(mii)
+        return mii[mmax]
+        # pos_mmax = where(mii == mmax)[0][0]
+        # if mi[pos_mmax] == mmax:
+        #     pos_max = pos_mmax
+        # else:
+        #     pos_max = pos_mmax +1
+        # n_cols = self.n_cols
+        # bin_pos_max = bin(pos_max)[2:]
+        # # Añadimos los 0 al principio que falten.
+        # for j in range(n_cols - len(bin_pos_max)):
+        #     bin_pos_max = '0' + bin_pos_max
+        # # Ahora, añadimos las posiciones de los '1' en cols (sin incluir la Y)
+        # cols = []
+        # for j in range( len(bin_pos_max) ):
+        #     if bin_pos_max[j] == '1':
+        #         cols.append(j)
+        # # Si el óptimo no tiene 1s en binario, es que se alcanza con todas las columnas
+        # if len(cols) == 0:
+        #     cols = list(range(n_cols))
+        # return (cols,mii[pos_max])
+
+    def min_mas_cercano(self,cols,delta):
+        deltaa = copy(delta[2])
+        min = delta[1]
+        deltaa.remove(min)
+        mmin = argmax(deltaa)
+        return deltaa[mmin]
