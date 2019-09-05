@@ -89,10 +89,10 @@ n_samples = 1000
 #                       (lambda x,y,z,a,b,c,d: np.sin(np.sqrt(x**2 + y**2))/(x**2 + y**2) + 20*(z-0.5)**2 + np.cos(a)*a**3 - (b-c/d)**2 ),[0,1,2,3,4,5,6],
 #                       ruido_unif=True,porc_ruido=0.7,
 #                       seed=seed)
-# info_examples.ejemplo('ejemploG', n_samples, 7,11,
-#                       (lambda x,y,z,a,b,c,d: np.sin(np.sqrt(x**2 + y**2))/(x**2 + y**2) + 20*(z-0.5)**2 + np.cos(a)*a**3 - (b-c/d)**2 ),[0,1,2,3,4,5,6],
-#                       seed=seed)
+info_examples.ejemplo('ejemploG_6000', n_samples*6, 7,11,
+                      (lambda x,y,z,a,b,c,d: np.sin(np.sqrt(x**2 + y**2))/(x**2 + y**2) + 20*(z-0.5)**2 + np.cos(a)*a**3 - (b-c/d)**2 ),[0,1,2,3,4,5,6],
+                      seed=seed)
 
-# info_examples.ejemplo('ejemploH', n_samples*6, 6,11,
-#                       (lambda x,y,z,a,b,c: np.sin(np.sqrt(x**2 + y**2))+(x**2 + y**2) + 20*(z-0.5)**2 + np.cos(a)*a**3 - (b-c)**2 ),[0,1,2,3,4,5],
-#                       seed=seed)
+info_examples.ejemplo('ejemploH_1000', n_samples, 6,11,
+                      (lambda x,y,z,a,b,c: np.sin(np.sqrt(x**2 + y**2))+(x**2 + y**2) + 20*(z-0.5)**2 + np.cos(a)*a**3 - (b-c)**2 ),[0,1,2,3,4,5],
+                      seed=seed)
